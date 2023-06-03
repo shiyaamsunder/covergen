@@ -1,8 +1,7 @@
 "use client";
 
 import { extractAllTrackImages } from '@/utils';
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Playlist } from 'spotify-types';
+import { useEffect, useRef, useState } from 'react'
 
 export type SpotifyTokenObject = {
   access_token: string,
@@ -17,8 +16,6 @@ export type SpotifyTokenObject = {
 //1sdzZxhPqiwES67lJUZHRu
 export function Main({ token }: { token: string }) {
   const PLAYLIST_ID_LEN = 22;
-  // const [playlistId, setPlaylistId] = useState("");
-  const [playlistDetails, setPlaylistDetails] = useState<Playlist | null>(null);
   const [allImages, setAllImages] = useState<string[] | null>(null);
   const [images, setImages] = useState<string[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,7 +59,7 @@ export function Main({ token }: { token: string }) {
       }
     }).then(res => res.json()).then(data => {
 
-      const imgs = extractAllTrackImages(data);
+      const imgs = extractAllTrackImages(data) as string[];
       setAllImages(imgs);
       setImages(getRandomCovers(imgs, 4));
 
