@@ -1,132 +1,170 @@
 "use client";
+import { MouseEvent, useEffect, useRef, useState } from "react";
+import {
+  extractAllTrackImages,
+  getRandomCovers,
+  extractPlaylistId,
+} from "@/utils";
 
-import { extractAllTrackImages } from '@/utils';
-import { useEffect, useRef, useState } from 'react'
-
-export type SpotifyTokenObject = {
-  access_token: string,
-  token_type: string,
-  expires: number;
-
-}
-
-
-//1TfSVpFlloA7rWjaM4rA8G
-//5czk7ME0ESx9w6VolKSMje
-//1sdzZxhPqiwES67lJUZHRu
-export function Main({ token }: { token: string }) {
-  const PLAYLIST_ID_LEN = 22;
+export function Main() {
   const [allImages, setAllImages] = useState<string[] | null>(null);
   const [images, setImages] = useState<string[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    fetch('/api/token').then(res => res.json()).then(d => console.log(d))
-  }, [])
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d");
 
-  // useEffect(() => {
-  //   const imgs = extractAllTrackImages(playlistDetails);
-  //   setAllImages(imgs);
-  //   setImages(getRandomCovers(allImages, 4));
-  // }, [playlistDetails]);
+    if (context) {
+      if (images) {
+        //TODO:find a way to implement this in a single loop.
+        // images.map((image, i) => {
+        //   if (i < 2) {
+        //   } else {
+        //     console.log(i, i % 2, i % (i + 1 - i));
+        //   }
+        // });
+        // if (images) {
+        //   for (let i = 0; i < 4; i++) {
+        //     let img: HTMLImageElement | null = null;
+        //     for (let j = 0; j < 4; j++) {
+        //       if (i < 2) {
+        //         img = new Image();
+        //         img.onload = function () {
+        //           context.drawImage(img, i * 350, j * 350, 350, 350);
+        //         };
+        //         console.log(`${j * 350}, ${i * 350}`);
 
+        //         img.setAttribute("crossorigin", "anonymous");
+        //       }
+        //     }
 
-  const extractPlaylistId = (link: string) => {
-    if (link.length == PLAYLIST_ID_LEN && link.match(/^[0-9A-Za-z_-]{22}$/)) {
-      return link
-    }
+        //     if (img) {
+        //       img.src = images[i];
+        //     }
+        //   }
+        // }
+        const img1 = new Image();
+        const img2 = new Image();
+        const img3 = new Image();
+        const img4 = new Image();
 
-    if (link.includes("https://open.spotify.com/")) {
-      const s = link.split("/");
-      const lastpart = (s[s.length - 1]);
-      if (lastpart.match(/\?/)) {
-        return lastpart.split("?")[0]
+        img1.onload = function () {
+          context.drawImage(img1, 0, 0, 350, 350);
+        };
+        img1.setAttribute("crossorigin", "anonymous");
+        img1.src = images[0];
+
+        img2.onload = function () {
+          context.drawImage(img2, 350, 0, 350, 350);
+        };
+        img2.setAttribute("crossorigin", "anonymous");
+        img2.src = images[1];
+
+        img3.onload = function () {
+          context.drawImage(img3, 0, 350, 350, 350);
+        };
+        img3.setAttribute("crossorigin", "anonymous");
+        img3.src = images[2];
+
+        img4.onload = function () {
+          context.drawImage(img4, 350, 350, 350, 350);
+        };
+        img4.setAttribute("crossorigin", "anonymous");
+        img4.src = images[3];
       }
-      else { return lastpart }
-
     }
-  }
+  }, [images]);
 
+  useEffect(() => {
+    if (error) {
+      alert(error);
+    }
+  }, [error]);
 
-  const handleClick = () => {
-    // setPlaylistId(extractPlaylistId(inputRef?.current?.value || "") || "")
-    let playlistId = (extractPlaylistId(inputRef?.current?.value || "") || "")
-
-    fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-      headers: {
-        Authorization: 'Bearer ' + token,
+  const handleClick = async () => {
+    let playlistId = null;
+    try {
+      if (!inputRef?.current?.value) {
+        throw new Error("Enter something in the input");
       }
-    }).then(res => res.json()).then(data => {
+      const res = await fetch("/api/token");
+      const data: { msg: string; token: string } = await res.json();
 
-      const imgs = extractAllTrackImages(data) as string[];
+      playlistId = extractPlaylistId(inputRef?.current?.value || "") || "";
+
+      const playlist_res = await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistId}`,
+        {
+          headers: {
+            Authorization: "Bearer " + data.token,
+          },
+        }
+      );
+      const playlists = await playlist_res.json();
+      const imgs = extractAllTrackImages(playlists) as string[];
       setAllImages(imgs);
       setImages(getRandomCovers(imgs, 4));
-
-    });
-
-
-
-  }
-
-  const getRandomCovers = (images: any[] | null, n: number) => {
-    //https://stackoverflow.com/questions/19269545/how-to-get-a-number-of-random-elements-from-an-array
-    if (images) {
-      let result = new Array(n),
-        len = images.length,
-        taken = new Array(len);
-      if (n > len)
-        throw new RangeError("getRandom: more elements taken than available");
-      while (n--) {
-        var x = Math.floor(Math.random() * len);
-        result[n] = images[x in taken ? taken[x] : x];
-
-        taken[x] = --len in taken ? taken[len] : len;
+    } catch (err) {
+      if (err instanceof Error || err instanceof RangeError) {
+        setError(err.message);
+        return;
       }
-      return result;
-    } else return null;
-  }
+    }
+  };
 
-
-
-  const handleCaptureClick = () => { }
+  const handleDownload = (e: MouseEvent<HTMLAnchorElement>) => {
+    const link = e.currentTarget;
+    link.setAttribute("download", "album_cover.jpg");
+    if (canvasRef.current) {
+      let image = canvasRef.current.toDataURL("image/png");
+      link.setAttribute("href", image);
+    }
+  };
   return (
-    <main className="flex  flex-col items-center justify-evenly p-24">
-      <h1 className="text-3xl font-bold mb-12">Cover Image Gen
-      </h1>
+    <main className="flex min-h-screen flex-col items-center justify-evenly p-24">
+      <h1 className="text-3xl font-bold mb-12">Cover Image Gen</h1>
 
-      <input type="text" ref={inputRef} placeholder='Enter your playlist id or url' className="p-2 text-black" />
-
-      <button onClick={handleClick} className='p-2 rounded-full bg-purple-700 text-white text-sm font-bold my-4'>Fetch Details</button>
-      <button onClick={() => { setImages(getRandomCovers(allImages, 4)) }} className='p-2 rounded-full bg-purple-700 text-white text-sm font-bold my-4'>Randomize Covers</button>
-      <button onClick={handleCaptureClick} className='p-2 rounded-full bg-purple-700 text-white text-sm font-bold my-4'>Download Covers</button>
-
-
-      {/* {playlistDetails && <div> */}
-      {/*   <p>Playlist name: {playlistDetails.name}</p> */}
-      {/*   <p>Description: {playlistDetails.description}</p> */}
-      {/**/}
-      {/*   <p>Created by: {playlistDetails.owner?.display_name}</p> */}
-      {/**/}
-      {/*   <p>Current Image: </p> */}
-      {/*   <img src={playlistDetails.images[0].url} alt="current_image" /> */}
-      {/* </div> */}
-      {/* } */}
-
-      <div id='cover' className="grid grid-cols-2">
-        {images && (images.map((image, i) => {
-          return (
-            <img src={image} width="350px" key={i} />
-
-          )
-
-        }))
-
-        }
+      <div className="flex items-center">
+        <input
+          type="text"
+          ref={inputRef}
+          placeholder="Enter your playlist id or url"
+          className="p-2 text-black mr-2 rounded-lg"
+        />
+        <button onClick={handleClick} className="btn">
+          Fetch Details
+        </button>
       </div>
 
+      <ul className="text-sm">
+        <li>
+          Note: Private playlists and Spotify made playlists won&apos;t work
+          (like Blend)
+        </li>
+        <li>Playlist must have more than 4 four unique songs</li>
+      </ul>
+
+      <canvas
+        className="mt-4 bg-transparent border-2 rounded-md"
+        width={350 * 2}
+        height={350 * 2}
+        ref={canvasRef}
+      ></canvas>
+
+      <button
+        onClick={() => {
+          setImages(getRandomCovers(allImages, 4));
+        }}
+        className="btn"
+      >
+        Randomize Covers
+      </button>
+      <a href="#" onClick={handleDownload} className="btn">
+        Download Covers
+      </a>
     </main>
-
-
-  )
+  );
 }
