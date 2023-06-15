@@ -9,6 +9,7 @@ import NextImage from 'next/image'
 
 export function Main() {
   const [allImages, setAllImages] = useState<string[] | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
   const [images, setImages] = useState<string[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -91,6 +92,7 @@ export function Main() {
       if (!inputRef?.current?.value) {
         throw new Error('Enter something in the input')
       }
+      setLoading(true)
       const res = await fetch('/api/token')
       const data: { msg: string; token: string } = await res.json()
 
@@ -114,6 +116,8 @@ export function Main() {
         return
       }
     }
+
+    setLoading(false)
   }
 
   const handleDownload = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -155,7 +159,13 @@ export function Main() {
         ref={canvasRef}
       ></canvas>
 
-      <div className='mt-4 bg-transparent w-[280px] h-[280px] md:w-[700px] md:h-[700px] border-2 rounded-md grid grid-cols-2'>
+      <div className='mt-4 bg-transparent relative w-[280px] h-[280px] md:w-[700px] md:h-[700px] border-2 rounded-md grid grid-cols-2'>
+        {loading && (
+          <div className='absolute w-full h-full flex items-center justify-center'>
+            {' '}
+            Loading{' '}
+          </div>
+        )}
         {images &&
           images.map((img) => (
             <div className='relative' key={img}>
